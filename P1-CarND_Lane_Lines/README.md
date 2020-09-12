@@ -271,7 +271,7 @@ The next step is to extract the line segments from the image. For that, we shall
 **Hough Transform**
 
 *Wikipedia: [Hough Transform](https://en.wikipedia.org/wiki/Hough_transform#:~:text=The%20Hough%20transform%20is%20a,shapes%20by%20a%20voting%20procedure.)*
-he Hough transform is a feature extraction technique used in image analysis, computer vision, and digital image processing. The purpose of the technique is to find imperfect instances of objects within a certain class of shapes by a voting procedure. This voting procedure is carried out in a parameter space, from which object candidates are obtained as local maxima in a so-called accumulator space that is explicitly constructed by the algorithm for computing the Hough transform.
+The Hough transform is a feature extraction technique used in image analysis, computer vision, and digital image processing. The purpose of the technique is to find imperfect instances of objects within a certain class of shapes by a voting procedure. This voting procedure is carried out in a parameter space, from which object candidates are obtained as local maxima in a so-called accumulator space that is explicitly constructed by the algorithm for computing the Hough transform.
 
 The Hough transform converts the cartesian representation `(x,y)` of a line `y = mx + b` to the parametric space `(b, m)`. However, for perpendicular lines, the slope is undefined. Hence, for computational purpose, the parametric space chosen is the polar form of a line (ρ, θ).
 
@@ -293,11 +293,11 @@ OpenCV includes two implementations of the Hough Transform. For more information
 
 We shall us use the probabilistic approach here (`cv2.HoughLinesP()`). The parameters used are:
 
-- $\rho$:  1
-- $\theta$: $\pi/180$
+- ρ: 1
+- θ: pi/180
 - Tolerance (number of votes): 30
 - Minimum Line Length: 1
-- Maximum Line Length for a particular line: 10
+- Maximum Line Length for a particular line: 50
 
 *Python Function*
 
@@ -418,13 +418,14 @@ The pipeline was wrapped as a python function `process_image(image)`, which shal
 Linear Interpolation gives good results on the two example videos. It also gives a good result for the challenge video, but it flickers a little in the way. It needs more smoothing.
 
 Check out the results of the pipeline: 
-1. [SolidWhiteRight](<iframe width="560" height="315" src="https://www.youtube.com/embed/7cdvC9K0i-4" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>)
-2. [SolidYellowLeft](<iframe width="560" height="315" src="https://www.youtube.com/embed/nKsD9EzlFHY" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>)
-3. [Challenge Video](<iframe width="560" height="315" src="https://www.youtube.com/embed/cUPvtBvio78" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>)
+- [SolidWhiteRight](https://www.youtube.com/embed/7cdvC9K0i-4)
+- [SolidYellowLeft](https://www.youtube.com/embed/nKsD9EzlFHY)
+- [Challenge Video](https://www.youtube.com/embed/cUPvtBvio78)
 
 **Polynomial Interpolation**
 
-The polynomial interpolation didn't work so well across frames, as is evident here: [SolidWhiteRight](<iframe width="560" height="315" src="https://www.youtube.com/embed/GnjOC9s3oWw" frameborder="0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>)
+The polynomial interpolation didn't work so well across frames, as is evident here: 
+- [SolidWhiteRight](https://www.youtube.com/embed/GnjOC9s3oWw)
 
 ---
 
@@ -432,7 +433,7 @@ The polynomial interpolation didn't work so well across frames, as is evident he
 
 The following shortcomings were observed with the current version of the pipeline:
 
-- The polynomial interpolation doesn't work too well, if there are a less number of line segments detected. It is better to use linear interpolations in that case.
+- The polynomial interpolation doesn't work too well on videos, if there are a less number of line segments detected. It is better to use linear interpolations in that case.
 - The interpolation results were not very smooth in case of the challenge video.
 - The Parameters were tricky to identify. Possibly better parameters exist.
 - The camera needs to be fixed at the current spot in all cases. This is required, as the vertices are hard coded in Region of Interest Detection.
