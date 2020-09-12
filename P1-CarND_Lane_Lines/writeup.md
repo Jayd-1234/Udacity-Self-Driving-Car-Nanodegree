@@ -135,7 +135,7 @@ The combined mask as described above can be visualized for two test images:
 Original Image | Combined Mask 
 :---: | :---: 
 ![Original Image](test_images/solidYellowCurve.jpg) | ![Combined Mask](Writeup_images/Color_Mask_solidYellowCurve.jpg)
-![Original Image](test_images/solidWhiteCurve.jpg) | ![Combined Mask](Writeup_images/Color_mask_solidWhiteCurve.jpg)
+![Original Image](test_images/solidWhiteCurve.jpg) | ![Combined Mask](Writeup_images/Color_Mask_solidWhiteCurve.jpg)
 
 ---
 
