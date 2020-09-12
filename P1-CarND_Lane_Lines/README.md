@@ -1,8 +1,10 @@
 # Finding Lane Lines on the Road
 
+*The processed images are in the `test_images_output` directory, while the `Writeup_images` contains the images used for this writeup.*
+
 ## Overview 
 
-Lane identification is a task that is done by human drivers easily, based on lane markers or road end-points. It helps in maintaining lanes on the road, and thereby, facilitates smooth driving and minimizes collisions.
+Lane identification is a preliminary requirement for development of autonomous driving systems. It is a task that is done by human drivers easily, based on lane markers or road end-points. It helps in maintaining lanes on the road, and thereby, facilitates smooth driving and minimizes collisions.
 
 However, what seems like a trivial task to us is quite the challenge for the computer to perform. To solve this, several computer vision techniques have been developed over the years. We shall describe one such technique here as a part of the 1st project in the [Self Driving Car nanodegree from Udacity](https://www.udacity.com/course/self-driving-car-engineer-nanodegree--nd013).
 
@@ -44,7 +46,7 @@ The outputs are present in the `test_images_output` and the `test_videos_output`
 ## The Pipeline
 
 ---
-In this part, we will cover in detail the different steps needed to create our pipeline, which will enable us to identify and classify lane lines. The pipeline itself will look as follows:
+The pipeline for processing the image is given below:
 
 1. Isolate yellow and white markings from the image
 
@@ -60,14 +62,15 @@ In this part, we will cover in detail the different steps needed to create our p
 6. Perform Hough Transform, and get the Hough Lines Segments from there.
 7. Separate the left and right lanes.
 8. Aggregate the line segments, and Average/Extrapolate them.
-9. Apply the pipeline
+9. Add Polynomial fitting support for curved lines
+9. Apply the pipeline on images and video frames
 ---
 
-### 1) Transforming Color Spaces
+### 1) Color Spaces
 
 ---
 
-While our image in currently in RBG format, we should explore whether visualizing it in different color spaces such as [HSL or HSV](https://en.wikipedia.org/wiki/HSL_and_HSV) to see whether they can help us in better isolating the lanes.
+During implementation of the project, it was observed that it will be better to incorporate alternate color spaces like HSL and HSV in the project.
 
 As an example, the sample image as visualized in the different color spaces are shown here:
 
@@ -76,8 +79,7 @@ RGB Space | HSV Space | HSL Space
 ![Original Image](test_images/solidWhiteCurve.jpg) | ![HSV_solidWhiteCurve.jpg](Writeup_images/HSV_solidWhiteCurve.jpg) | ![](Writeup_images/HLS_solidWhiteCurve.jpg)
 ![Original Image](test_images/solidYellowCurve.jpg) | ![HSV_solidWhiteCurve.jpg](Writeup_images/HSV_solidYellowCurve.jpg) | ![](Writeup_images/HLS_solidYellowCurve.jpg)
 
-As can be seen while comparing images, HSL is better at contrasting lane lines than HSV. HSV is "blurring" our white lines too much, so it would not be suitable for us not to opt for it in this case. At the very least it will be easier for us to isolate yellow and white lanes using HSL. So let's use it.
-
+As can be seen while comparing images, HSL is better at contrasting lane lines than HSV. So, we shall use it for the project.
 ---
 
 ### 2) Determination of Yellow and White Markings from the Image
@@ -144,9 +146,9 @@ Original Image | Combined Mask
 
 ---
 
-We are interested in detecting white or yellow lines on images, which show a particularly high contrast when the image is in grayscale. Remember that the road is black, so anything that is much brighter on the road will come out with a high contrast in a grayscale image.
+We are interested in detecting white or yellow lines on images, which show a particularly high contrast when the image is in grayscale. 
 
-The conversion from RGB to a different space helps in reducing noise from the original three color channels. This is a necessary pre-processing steps before we can run more powerful algorithms to isolate lines.
+This is why, conversion from RGB space to grayscale is carried out, which also helps to reduce the noise from the other channels of the image.
 
 ```python
 def grayscale(img):
@@ -174,7 +176,7 @@ Original Image | Grayscale Image | GrayScale Image combined with Color Mask
 
 ---
 
-[Gaussian blur](https://en.wikipedia.org/wiki/Gaussian_blur) (also referred to as Gaussian smoothing) is a pre-processing technique used to smoothen the edges of an image to reduce noise. This step is taken to reduce the number of lines we detect, as we only want to focus on the most significant lines (the lane ones), not those on every object. .
+[Gaussian blur](https://en.wikipedia.org/wiki/Gaussian_blur) (also referred to as Gaussian smoothing) is a pre-processing technique used to smoothen the edges of an image to reduce noise.
 
 The OpenCV implementation of Gaussian Blur takes a integer kernel parameter which indicates the intensity of the smoothing. For our task we choose a value of _3_.
 
@@ -198,12 +200,12 @@ Original Image | GrayScale Image | Blurred GrayScale Image
 
 ---
 
-Now that we have sufficiently pre-processed the image, we can apply a [Canny Edge Detector](https://en.wikipedia.org/wiki/Canny_edge_detector), whose role it is to identify lines in an image and discard all other data. 
+To identify the edges, we shall apply a [Canny Edge Detector](https://en.wikipedia.org/wiki/Canny_edge_detector). 
 
 The OpenCV implementation requires passing in two parameters in addition to our blurred image, a low and high threshold which determine whether to include a given edge or not. A threshold captures the intensity of change of a given point. Any point beyond the high threshold will be included in our resulting image, while points between the threshold values will only be included if they are next to edges beyond our high threshold. Edges that are below our low threshold are discarded. We use values _70_ and _140_ respectively for low and high thresholds.
 
 ```python
-def canny(img, low_threshold=50, high_threshold=150):
+def canny(img, low_threshold=70, high_threshold=140):
     return cv2.Canny(img, low_threshold, high_threshold)
 
 canny_edges = canny(blur, 70, 140)
@@ -271,19 +273,19 @@ The next step is to extract the line segments from the image. For that, we shall
 **Hough Transform**
 
 *Wikipedia: [Hough Transform](https://en.wikipedia.org/wiki/Hough_transform#:~:text=The%20Hough%20transform%20is%20a,shapes%20by%20a%20voting%20procedure.)*
-The Hough transform is a feature extraction technique used in image analysis, computer vision, and digital image processing. The purpose of the technique is to find imperfect instances of objects within a certain class of shapes by a voting procedure. This voting procedure is carried out in a parameter space, from which object candidates are obtained as local maxima in a so-called accumulator space that is explicitly constructed by the algorithm for computing the Hough transform.
+
+> The Hough transform is a feature extraction technique used in image analysis, computer vision, and digital image processing. The purpose of the technique is to find imperfect instances of objects within a certain class of shapes by a voting procedure. This voting procedure is carried out in a parameter space, from which object candidates are obtained as local maxima in a so-called accumulator space that is explicitly constructed by the algorithm for computing the Hough transform.
 
 The Hough transform converts the cartesian representation `(x,y)` of a line `y = mx + b` to the parametric space `(b, m)`. However, for perpendicular lines, the slope is undefined. Hence, for computational purpose, the parametric space chosen is the polar form of a line (ρ, θ).
 
 In this plane:
 
-- Lines are represented as points
-- Points are presented as lines (since they can be on many lines in traditional coordinate system)
-- Intersecting lines means the same point is on multiple lines
+- Lines are represented as points.
+- Points are presented as lines.
+- Intersecting lines means the same point is on multiple lines.
+- Straight lines going through a point correspond to a sinusoidal curve in the (ρ, θ) plane.
+- A set of points on the same line will lead to intersecting sinusoids, so our goal is to find such intersecting sinusoids in the Hough Space.
 
-Therefore, in such plane, we can more easily identify lines that go via the same point. We however need to move from the current system to a _Hough Space_ which uses _polar coordinates_ one as our original expression is not differentiable when m=0 (i.e. vertical lines). In polar coordinates, a given line will now be expressed as (ρ, θ), where line L is reachable by going a distance ρ at angle θ from the origin, thus meeting the perpendicular L; that is ρ = x cos θ + y sin θ.
-
-All straight lines going through a given point will correspond to a sinusoidal curve in the (ρ, θ) plane. Therefore, a set of points on the same straight line in Cartesian space will yield sinusoids that cross at the point (ρ, θ). This naturally means that the problem of detecting points on a line in cartesian space is reduced to finding intersecting sinusoids in Hough space.
 
 ![Hough Space](Writeup_images/Hough_space_polar.png "https://miro.medium.com/max/875/1*Cr73Mte5NNgO16D4moKDQg.png")
 
@@ -330,12 +332,12 @@ Separation of left and Right Lanes can be done easily, if we notice that:
 
 Hence, the lanes can be identified by calculating the slopes of the hough line segments, and then classifying them to left or right lanes.
 
-In order to avoid parallel lines for this project, we consider a threshold value for the slope, so that it is:
+In order to avoid parallel lines for this project, we consider a threshold value for the slope (default=0.3), so that it is:
 
 * A Left lane is `slope < -threshold`.
 * A Right Lane if `slope > threshold`.
 
-For implementation, please have a look at the `draw_lines()` function in the notebook.
+For implementation, please have a look at the `draw_lines()` function in the notebook. It has been annotated with comments for the important parts
 
 **Visualization**
 
@@ -444,9 +446,8 @@ The following improvements are planned for future:
 
 - Use a memory based approach for smoothing of the lines in the videos, which shall use the data from past frames as well.
 - Develop an algorithm to identify the Region of Interest dynamically.
+- Use a different method to determine a larger number of points from the lane lines, so that a smooth curve can be fitted there.
 - Use deep learning for the process.
 
 
-```python
-
-```
+*Disclaimer:* During the project implementation, I was inspired from the writeups by previous Nanodegree students [Nachiket Tanksale](https://towardsdatascience.com/finding-lane-lines-simple-pipeline-for-lane-detection-d02b62e7572b) (on the topics of HSL color space and video processing ideas) and [Mark Misener](https://github.com/markmisener/udacity-self-driving-car-engineer) (on I/O requirements and general arrangement of functions, in particular the `process_image()` in the project).   
